@@ -11,7 +11,7 @@ A Master node is where the control plane is responsible for managing the state o
 
 ## Master node components
 
-**Kube-apiserver:**Coordinates all administrative tasks, intercepts RESTful calls from users, operators and external agents to later validate and process them
+**Kube-apiserver:** Coordinates all administrative tasks, intercepts RESTful calls from users, operators and external agents to later validate and process them
 
 • APIServer reads the current state of the cluster through etcd and then makes an execution call, the result is saved in etcd.
 • APIServer is the ONLY control plane component to communicate with etcd, it serves as an intermediate interface between etcd and any other control plane agent.
