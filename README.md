@@ -1,8 +1,52 @@
-# Kubernetes Guide to deploy a HA cluster with KeepAlived, HAProxy, metalLB and kubeadm
+# Kubernetes HA on premise: Guide to bootstrap a Kubernetes cluster with Kubeadm, KeepAlived and HAProxy
 
-![diagramgit](https://user-images.githubusercontent.com/31323133/110505246-f90c9580-80cb-11eb-882f-2d7e601432db.png)
+This tutorial is focus in a particular way to bootstrap a Kubernetes cluster, this approach is very usefull to get know of all parts of a kubernetes cluster, its funtions and crucial information for a correct operation. For production enviroments is highly recommend use a Kubernetes service provide and manage by a Cloud provider due to all the complexity that carries manage, update and mantain in good conditions a k8s cluster.
 
-Ejecutar en los nodos Master y Workers
+## Target Audience
+
+The target audience for this tutorial is someone that wants to learn how bootstrap a k8s cluster and understand its principal features and limitations in an on premise environment.
+
+## Cluster Details
+
+Kubernetes The Hard Way guides you through bootstrapping a highly available Kubernetes cluster with end-to-end encryption between components and RBAC authentication.
+
+* [kubernetes](https://github.com/kubernetes/kubernetes) v1.21.2
+* [containerd](https://github.com/containerd/containerd) v1.5.2
+* [calico](https://github.com/projectcalico/calico) v3.18.4
+* [docker](https://github.com/docker/docker-ce) v19.03.14
+* [etcd](https://github.com/etcd-io/etcd) v3.4.15
+* [keepalived](https://github.com/acassen/keepalived) v2.2.2
+* [haproxy](https://github.com/haproxy/haproxy)
+* [kubeadm](https://github.com/kubernetes/kubeadm) 
+* [ubuntu](https://github.com/ubuntu)
+
+
+## Getting started
+
+For this tutorial we are going to use 6 Virtual Machine on Ubuntu 18.04 LTS, you could use VMware or another hypervisior for creating all the VM, 2 of this VM are going to be used on the install HAProxy and KeepAlived those VM doesn't need too much RAM and CPU, with at least 500 MB of RAM and 1 CPU Core should be enough, on the official Kubernetes documentation recommends for cluster nodes 2 GB RAM and 2 CPU Cores.
+
+### Summary
+
+* [HAProxy and KeepAlived Machine] 500MB RAM | 1 CPU Core
+* [HAProxy and KeepAlived Machine] 500MB RAM | 1 CPU Core
+* [Kubernetes Master Node 1] 2GB RAM | 2 CPU Core
+* [Kubernetes Master Node 2] 2GB RAM | 2 CPU Core
+* [Kubernetes Worker Node 1] 2GB RAM | 2 CPU Core
+* [Kubernetes Worker Node 2] 2GB RAM | 2 CPU Core
+
+## Architecture explanation
+
+The architecture to deploy on this tutorial is focus on ensure a High Avaiability Cluster, with redundant master. if you want a brief explanation of Kuberneres you could go to this link on this repo:
+
+* [Introduction to Kubernetes]
+
+![imagen github](https://user-images.githubusercontent.com/31323133/125170141-02d60080-e173-11eb-820e-d6c82efac463.png)
+
+
+
+
+
+
 
 Tener en cuenta, realizar cada apt update en cada lugar que es indicado, debido a que cada apt update aporta diferentes actualizaciones en las diferentes fases de la instalación, debido a la inclusión de nuevos repositorios. 
 
