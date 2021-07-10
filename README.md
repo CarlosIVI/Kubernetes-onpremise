@@ -1,4 +1,4 @@
-# Kubernetes HA on premise: Guide to bootstrap a Kubernetes cluster with Kubeadm, KeepAlived and HAProxy
+# Kubernetes HA on premise: Kubernetes cluster with Kubeadm, KeepAlived and HAProxy
 
 This tutorial is focus in a particular way to bootstrap a Kubernetes cluster, this approach is very usefull to get know of all parts of a kubernetes cluster, its funtions and crucial information for a correct operation. For production enviroments is highly recommend use a Kubernetes service provide and manage by a Cloud provider due to all the complexity that carries manage, update and mantain in good conditions a k8s cluster.
 
