@@ -38,7 +38,7 @@ For this tutorial we are going to use 6 Virtual Machine on Ubuntu 18.04 LTS, you
 
 The architecture to deploy on this tutorial is focus on ensure a High Avaiability Cluster, with redundant master. if you want a brief explanation of Kuberneres you could go to this link on this repo:
 
-* [Introduction to Kubernetes]
+* [Introduction to Kubernetes](https://github.com/CarlosIVI/Kubernetes-onpremise/blob/main/introduction-to-kubernetes.md)
 
 ![imagen github](https://user-images.githubusercontent.com/31323133/125170141-02d60080-e173-11eb-820e-d6c82efac463.png)
 
