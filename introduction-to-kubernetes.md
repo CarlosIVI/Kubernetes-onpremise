@@ -1,3 +1,6 @@
+## Introduction to Kubernetes
+
+
 Kubernetes is a tool for container orchestration and is composed of a set of node machines, which are classified into master node and worker node.
 
 Master node: It is where the control plane is responsible for managing the state of all clusters
@@ -6,7 +9,7 @@ Master node: It is where the control plane is responsible for managing the state
 • The persistence in the state of a cluster is done in an etcd (Key-value distributed storage)
 • Etcd can be configured on the master node (Stacked topology) or on a dedicated host (External topology)
 
-Components of the Master:
+## Components of the Master:
 
 Kube-apiserver: Coordinates all administrative tasks, intercepts RESTful calls from users, operators and external agents to later validate and process them
 
