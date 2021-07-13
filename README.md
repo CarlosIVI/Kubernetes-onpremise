@@ -1,6 +1,10 @@
 # Kubernetes HA on premise: Kubernetes cluster with Kubeadm, KeepAlived and HAProxy
 
+
+
 This tutorial is focus in a particular way to bootstrap a Kubernetes cluster, this approach is very usefull to get know of all parts of a kubernetes cluster, its funtions and crucial information for a correct operation. For production enviroments is highly recommend use a Kubernetes service provide and manage by a Cloud provider due to all the complexity that carries manage, update and mantain in good conditions a k8s cluster.
+
+> This tutorial was inspired by [Kubernetes the hard way](https://github.com/kelseyhightower/kubernetes-the-hard-way) 
 
 ## Target Audience
 
@@ -8,7 +12,7 @@ The target audience for this tutorial is someone that wants to learn how bootstr
 
 ## Cluster Details
 
-Kubernetes The Hard Way guides you through bootstrapping a highly available Kubernetes cluster with end-to-end encryption between components and RBAC authentication.
+Kubernetes HA on premise guides you through bootstrapping a highly available Kubernetes cluster with end-to-end encryption.
 
 * [kubernetes](https://github.com/kubernetes/kubernetes) v1.21.2
 * [containerd](https://github.com/containerd/containerd) v1.5.2
