@@ -47,56 +47,82 @@ The architecture to deploy on this tutorial is focus on ensure a High Avaiabilit
 ![imagen github](https://user-images.githubusercontent.com/31323133/125170141-02d60080-e173-11eb-820e-d6c82efac463.png)
 
 
+## Start here
+
+# First Step
+
+We are going to prepare all our cluster node virtual machines for the Kubernetes installation, first of all, we must disable the swap, we could do this by executing the following commands in the CLI:
 
 
-
-
-
-Tener en cuenta, realizar cada apt update en cada lugar que es indicado, debido a que cada apt update aporta diferentes actualizaciones en las diferentes fases de la instalación, debido a la inclusión de nuevos repositorios. 
-
-sudo apt update
-
-sudo apt -y upgrade && sudo systemctl reboot
-
-sudo apt -y install curl apt-transport-https
-
-Deshabilitar el swap 
-
+```sh
 sudo swapoff -a
+```
 
-sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
+After this you must go to the /etc/fstab file and comment the that refers to the swap.
 
-Comentar la linea /swapfile  o la variable label que apunta al swap
+![image](https://user-images.githubusercontent.com/31323133/127594065-382aefa8-7fb3-4e1c-aa95-04b2300b59d1.png)
 
-sudo nano /etc/fstab
+It is important to update all packages and reboot systemctl.
 
+```sh
+sudo apt -y upgrade 
+sudo systemctl reboot
+```
 
+# Installing Kubernetes
 
-Inicia la instalación 
+To install Kubernetes we must let iptables see bridged traffic, to make sure of that you must load module `br_netfilter` and you have to ensure `net.bridge.bridge-nf-call-iptables` is set in 1.
+
+```sh
+sudo modprobe overlay
+sudo modprobe br_netfilter
+
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+br_netfilter
+EOF
+
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+
+sudo sysctl --system
+```
+Is not necesary but recommended install utilities as VIM, GIT, CURL and WGET.
+
+```sh
+sudo apt -y install vim git curl wget
+```
+
+After that update the `apt` package index, download the Google Cloud public signing key and add the Kubernetes `apt` repository:
+
+```sh
+sudo apt update
 
 curl -s https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo apt-key add -
 
 echo "deb https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
 
-sudo apt update
+```
 
-sudo apt -y install vim git curl wget kubelet kubeadm kubectl
+Update again `apt` package index, install kubectl, kubeadm and kubelet
+
+```sh
+sudo apt-get update
+
+sudo apt -y install kubelet kubeadm kubectl
 
 sudo apt-mark hold kubelet kubeadm kubectl
+```
 
-sudo modprobe overlay
+# Containerd as a container runtime 
 
-sudo modprobe br_netfilter
-
-sudo tee /etc/sysctl.d/kubernetes.conf<<EOF
-net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
-net.ipv4.ip_forward = 1
+```sh
+cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
+overlay
+br_netfilter
 EOF
-
-sudo sysctl --system
-
-Instalar Docker+Containerd como runtime
+```
 
 sudo apt update
 
