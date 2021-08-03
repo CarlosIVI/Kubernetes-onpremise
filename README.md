@@ -158,7 +158,7 @@ sudo kubeadm config images pull
 echo 1 > /proc/sys/net/ipv4/ip_forward
 nano /etc/sysctl.conf
 ```
-![image](https://user-images.githubusercontent.com/31323133/127960238-2d725e73-2117-498f-890d-84c818dd12f7.png)
+![image](https://user-images.githubusercontent.com/31323133/127960742-b379d7e1-d616-46c7-886f-7bc309a52547.png)
 
 
 
