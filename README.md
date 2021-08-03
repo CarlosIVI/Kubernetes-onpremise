@@ -47,9 +47,7 @@ The architecture to deploy on this tutorial is focus on ensure a High Avaiabilit
 ![imagen github](https://user-images.githubusercontent.com/31323133/125170141-02d60080-e173-11eb-820e-d6c82efac463.png)
 
 
-## Start here
-
-# First Step
+# General pre-requisites
 
 We are going to prepare all our cluster node virtual machines for the Kubernetes installation, first of all, we must disable the swap, we could do this by executing the following commands in the CLI:
 
@@ -83,7 +81,8 @@ EOF
 
 cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
 net.bridge.bridge-nf-call-ip6tables = 1
-net.bridge.bridge-nf-call-iptables = 1
+net.ipv4.ip_forward                 = 1
+net.bridge.bridge-nf-call-iptables  = 1
 EOF
 
 sudo sysctl --system
@@ -115,7 +114,11 @@ sudo apt -y install kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 ```
 
-# Containerd as a container runtime 
+# Containerd as a container runtime
+
+> Note: On December 2020, Kubernetes anunced deprecation of Docker as Container Underlying Runtime
+
+Is necesary to add config lines to `/etc/modules-load.d/container.conf`
 
 ```sh
 cat <<EOF | sudo tee /etc/modules-load.d/containerd.conf
@@ -123,211 +126,39 @@ overlay
 br_netfilter
 EOF
 ```
+Apply changes without reboot 
 
-sudo apt update
+```sh
+sudo sysctl --system
+```
+Install containerd and create the containerd configuration file
 
-sudo apt install -y curl gnupg2 software-properties-common apt-transport-https ca-certificates
+```sh
+sudo mkdir -p /etc/containerd
+sudo containerd config default | sudo tee /etc/containerd/config.toml
+```
 
-curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add -
+In /etc/containerd/config.toml, around line 86, on section `[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc]` add this lines, be careful with identation.
 
-sudo add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
+```sh
+[plugins."io.containerd.grpc.v1.cri".containerd.runtimes.runc.options]
+  SystemdCgroup = true
+```
 
-sudo apt update
+Restar containerd
 
-sudo apt install -y containerd.io docker-ce docker-ce-cli
+```sh
+sudo systemctl restart containerd
+```
+Enable kubelet, pull config images and enable packet forwarding for IPV4 on  `/etc/sysctl.conf` 
 
-sudo mkdir -p /etc/systemd/system/docker.service.d
-
-sudo tee /etc/docker/daemon.json <<EOF
-{
-  "exec-opts": ["native.cgroupdriver=systemd"],
-  "log-driver": "json-file",
-  "log-opts": {
-    "max-size": "100m"
-  },
-  "storage-driver": "overlay2"
-}
-EOF
-
-sudo systemctl daemon-reload 
-sudo systemctl restart docker
-sudo systemctl enable docker
-
+```sh
 systemctl enable kubelet
-
 sudo kubeadm config images pull
-
 echo 1 > /proc/sys/net/ipv4/ip_forward
-
 nano /etc/sysctl.conf
+```
+![image](https://user-images.githubusercontent.com/31323133/127960238-2d725e73-2117-498f-890d-84c818dd12f7.png)
 
 
-
-Configuración de los Load Balancers
-
-Para el balanceador de carga se utilizará haproxy, para garantizar High Avaibility se utilizará keepAlived con el protocolo Virtaul Redundacy Routing Protocol, estos comandos sólo iran en los dos nodos con la función LB.
-
-Instalación de KeepAlived y configuración del VRRP
-
-sudo apt-get update
-sudo apt-get install build-essential libssl-dev
-sudo apt-get install keepalived
-
-LoadBalancer 1
-
-vim /etc/keepalived/keepalived.conf
-
-global_defs {
-   notification_email {
-     support@calipso.co
-   }
-   notification_email_from jhanc_diaz@calipso.co
-   smtp_server localhost
-   smtp_connect_timeout 30
-}
-
-vrrp_instance VI_1 {
-    state MASTER
-    interface eth0   #Interfaz la cual vamos a usar para conectarnos a los masters
-    virtual_router_id 101   
-    priority 101    #Prioridad, define cual va a ser el nodo activo y cual el pasivo
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass 1111
-    }
-    virtual_ipaddress {
-        10.74.84.75  #IP Virtual que queremos usar para el lb
-    }
-}
-
-LoadBalancer 2
-
-vim /etc/keepalived/keepalived.conf
-
-global_defs {
-   notification_email {
-     support@calipso.co
-   }
-   notification_email_from jhanc_diaz@calipso.co
-   smtp_server localhost
-   smtp_connect_timeout 30
-}
-
-vrrp_instance VI_1 {
-    state MASTER
-    interface eth0   #Interfaz la cual vamos a usar para conectarnos a los masters
-    virtual_router_id 101
-    priority 100      #Prioridad, define cual va a ser el nodo activo y cual el pasivo
-    advert_int 1
-    authentication {
-        auth_type PASS
-        auth_pass 1111
-    }
-    virtual_ipaddress {
-        10.185.73.67  #IP Virtual que queremos usar para el lb como entidad
-    }
-}
-
-Ambos LoadBalancer
-
-service keepalived start
-sudo apt update && apt install -y haproxy
-vim /etc/haproxy/haproxy.cfg
-
-
-Al final agregar:
-
-frontend kubernetes-frontend
-    bind  10.185.73.67:6443     #Dirección general de ambos LoadBalancers y puerto usado por K8S
-    mode tcp
-    option tcplog
-    default_backend kubernetes-backend
-
-backend kubernetes-backend
-    mode tcp
-    option tcp-check
-    balance roundrobin
-    server k8s-masterdev01 10.74.84.125:6443 check fall 3 rise 2   #Hostname, IP red interna y puerto k8s del master
-    server k8s-masterdev02 10.185.73.68:6443 check fall 3 rise 2   #Hostname, IP red interna y puerto k8s del master
-
-
-Ejecutar:
-systemctl restart haproxy
-
-Importante:
-
-Este comando va a generar un error en el lb02, debido a que lb02 esta en state backup y aún no crea la IP virtual 10.74.84.75,
-Haciendo el haproxy falle, entonces lo que se debe hacer en el lb01 es reiniciarlo con reboot, esto hará que el lb02 quede como maestro y se cree la IP virtual, luego en el lb02 ejecute systemctl restart haproxy
-
-En el master01
-
-kubeadm init --control-plane-endpoint=" 10.185.73.67:6443" --upload-certs --apiserver-advertise-address=<IPMaster01> --pod-network-cidr=192.168.0.0/16
-
-
-Como resultado se obtendrá algo parecido al siguiente ejemplo
-
-To start using your cluster, you need to run the following as a regular user:
-
-  mkdir -p $HOME/.kube
-  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-  sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-Alternatively, if you are the root user, you can run:
-
-  export KUBECONFIG=/etc/kubernetes/admin.conf
-
-You should now deploy a pod network to the cluster.
-Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
-  https://kubernetes.io/docs/concepts/cluster-administration/addons/
-
-You can now join any number of the control-plane node running the following command on each as root:
-
-  kubeadm join 10.74.84.75:6443 --token d12xz3.l02dpzix58gy3k1m \
-    --discovery-token-ca-cert-hash sha256:35415f7fd915aafcbc86b23ff074c07c1ef08abdf77a5811683ebfb210525ad4 \
-    --control-plane --certificate-key 478bcd1bb75c459b9641ac614220c5ce88930e7f5292d2ff48482d753aa520c3 --apiserver-advertise-address=10.185.73.68
-
-Please note that the certificate-key gives access to cluster sensitive data, keep it secret!
-As a safeguard, uploaded-certs will be deleted in two hours; If necessary, you can use
-"kubeadm init phase upload-certs --upload-certs" to reload certs afterward.
-
-Then you can join any number of worker nodes by running the following on each as root:
-
-kubeadm join 10.74.84.75:6443 --token d12xz3.l02dpzix58gy3k1m \
-    --discovery-token-ca-cert-hash sha256:35415f7fd915aafcbc86b23ff074c07c1ef08abdf77a5811683ebfb210525ad4
-
-
-Ejecutamos lo siguiente el master01
-
-mkdir -p $HOME/.kube
-sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
-sudo chown $(id -u):$(id -g) $HOME/.kube/config
-
-Para agregar otro máster usamos lo siguiente y le agregamos --apiserver-advertise-address=<IPRedInternaNuevoMaster>
-
-kubeadm join  10.185.73.67:6443 --token d12xz3.l02dpzix58gy3k1m \
-    --discovery-token-ca-cert-hash sha256:35415f7fd915aafcbc86b23ff074c07c1ef08abdf77a5811683ebfb210525ad4 \
-    --control-plane --certificate-key 478bcd1bb75c459b9641ac614220c5ce88930e7f5292d2ff48482d753aa520c3 --apiserver-advertise-address=<IPMaster>
-
-PD: Este es un ejemplo, el suyo estará en la consola. Importante agregar ese parámetro al final, debido a que por defecto no viene
-
-Luego de agregar las N cantidad de másters para HA se agregan la N cantidad de workers con el segundo proveido por k8s
-
-kubeadm join  10.185.73.67:6443 --token d12xz3.l02dpzix58gy3k1m \
-    --discovery-token-ca-cert-hash sha256:35415f7fd915aafcbc86b23ff074c07c1ef08abdf77a5811683ebfb210525ad4
-
-
-Finalmente se agrega la subred Calico
-
-kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
-
-Para ejecutar comandos en los demás másters (que no sea el master01) se debe usar el siguiente subfijo despues del kubectl
-
-kubectl --kubeconfig=/etc/kubernetes/admin.conf
-
-Ejemplo de un get nodes
-
-kubectl --kubeconfig=/etc/kubernetes/admin.conf get nodes
-
-![image](https://user-images.githubusercontent.com/31323133/110505591-4a1c8980-80cc-11eb-86dd-a50002076ef1.png)
 
