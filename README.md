@@ -47,7 +47,7 @@ The architecture to deploy on this tutorial is focus on ensure a High Avaiabilit
 ![imagen github](https://user-images.githubusercontent.com/31323133/125170141-02d60080-e173-11eb-820e-d6c82efac463.png)
 
 
-# General pre-requisites
+## General pre-requisites
 
 We are going to prepare all our cluster node virtual machines for the Kubernetes installation, first of all, we must disable the swap, we could do this by executing the following commands in the CLI:
 
@@ -67,7 +67,7 @@ sudo apt -y upgrade
 sudo systemctl reboot
 ```
 
-# Installing Kubernetes
+## Installing Kubernetes
 
 To install Kubernetes we must let iptables see bridged traffic, to make sure of that you must load module `br_netfilter` and you have to ensure `net.bridge.bridge-nf-call-iptables` is set in 1.
 
@@ -114,7 +114,7 @@ sudo apt -y install kubelet kubeadm kubectl
 sudo apt-mark hold kubelet kubeadm kubectl
 ```
 
-# Containerd as a container runtime
+## Containerd as a container runtime
 
 > Note: On December 2020, Kubernetes anunced deprecation of Docker as Container Underlying Runtime
 
@@ -158,7 +158,40 @@ sudo kubeadm config images pull
 echo 1 > /proc/sys/net/ipv4/ip_forward
 nano /etc/sysctl.conf
 ```
+
 ![image](https://user-images.githubusercontent.com/31323133/127960742-b379d7e1-d616-46c7-886f-7bc309a52547.png)
+
+## Load Balancer configuration
+
+On the others ubuntu VM (500MB RAM) install HAProxy and KeepAlived with the Virtual Redundacy Routing Protocol (VRRP) for ensure high avaibility on the Kubernetes Cluster. Is necesary because kubeadm requires a principal IP to init a cluster, this IP is going to be used as an endpoint, if that endpoint dies, the whole cluster is going to fall (Workers may still alive but won't respond to changes)
+
+Install keepalived and edit the configuration file on `/etc/keepalived/keepalived.conf`
+
+```sh
+global_defs {
+   notification_email {
+     email@email.com
+   }
+   notification_email_from email@email.com
+   smtp_server localhost
+   smtp_connect_timeout 30
+}
+
+vrrp_instance VI_1 {
+    state MASTER         
+    interface eth0       #Interface used to active VRRP
+    virtual_router_id 101   
+    priority 101         #If the node is MASTER priority must be the highest
+    advert_int 1
+    authentication {
+        auth_type PASS  
+        auth_pass 1111   #Must Change
+    }
+    virtual_ipaddress {
+        5.5.5.5  #Virtual IP to use (Must be on the same network)
+    }
+}
+```
 
 
 
