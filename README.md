@@ -165,7 +165,17 @@ nano /etc/sysctl.conf
 
 On the others ubuntu VM (500MB RAM) install HAProxy and KeepAlived with the Virtual Redundacy Routing Protocol (VRRP) for ensure high avaibility on the Kubernetes Cluster. Is necesary because kubeadm requires a principal IP to init a cluster, this IP is going to be used as an endpoint, if that endpoint dies, the whole cluster is going to fall (Workers may still alive but won't respond to changes)
 
-Install keepalived and edit the configuration file on `/etc/keepalived/keepalived.conf`
+Install keepalived and edit the configuration file
+
+```sh
+sudo apt-get update
+sudo apt-get install build-essential libssl-dev
+sudo apt-get install keepalived
+
+```
+
+
+Configuration file on `/etc/keepalived/keepalived.conf`
 
 ```sh
 global_defs {
@@ -193,5 +203,111 @@ vrrp_instance VI_1 {
 }
 ```
 
+Later you must install HA Proxy to create a Frontend to recive all the request related with K8S clusters, and a Backend to connect to the Master node.
+
+Install HAProxy
+
+```sh
+sudo apt update && apt install -y haproxy
+```
+
+Edit a config File on `/etc/haproxy/haproxy.cfg`
 
 
+```sh
+frontend kubernetes-frontend
+    bind  5.5.5.5:6443     #Same Virtual IP and K8S Port
+    mode tcp
+    option tcplog
+    default_backend kubernetes-backend
+
+backend kubernetes-backend
+    mode tcp
+    option tcp-check
+    balance roundrobin
+    server k8s-masterdev01 1.1.1.1:6443 check fall 3 rise 2   #Hostname Master1, Internal IP and k8s Port
+    server k8s-masterdev02 2.2.2.2:6443 check fall 3 rise 2   #Hostname Master2, Internal IP and k8s Port
+
+```
+It is necessary to restart both services
+
+```
+service keepalived start
+systemctl restart haproxy
+```
+This proccess must be replicated on the second loadbalancer LB02 but the  `/etc/keepalived/keepalived.conf` change on this parameters:
+
+```sh
+...
+vrrp_instance VI_1 {
+    state MASTER         
+    interface eth0      
+    virtual_router_id 102   #CHANGE ROUTER ID TO 102
+    priority 100            #CHANGE PRIORITY TO A LOWER
+    advert_int 1
+    ...
+```
+
+Important: The `systemctl restart haproxy` command in LB02 will generate an error, because lb02 is in state backup and still does not create the virtual IP 5.5.5.5, causing the haproxy to fail, so what must be done in lb01 is to restart it, this will make the lb02 remain as master and create the virtual IP, then in the lb02 execute `systemctl restart haproxy` 
+
+## Kubernetes Cluster Bootstrap
+
+On Master01 you must run the following command
+
+```sh
+kubeadm init --control-plane-endpoint=" 5.5.5.5:6443" --upload-certs --apiserver-advertise-address=<IPMaster01> --pod-network-cidr=192.168.0.0/16
+```
+
+As result you will got the following output, and you must run the following instructions
+
+
+```sh
+
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+...
+```
+
+On Master02 you must Join another Control-plane node (Master) by running the next command.
+
+```sh
+...
+
+You can now join any number of the control-plane node running the following command on each as root:
+
+  kubeadm join 10.74.84.75:6443 --token d12xz3.l02dpzix58gy3k1m \
+    --discovery-token-ca-cert-hash sha256:35415f7fd915aafcbc86b23ff074c07c1ef08abdf77a5811683ebfb210525ad4 \
+    --control-plane --certificate-key 478bcd1bb75c459b9641ac614220c5ce88930e7f5292d2ff48482d753aa520c3 --apiserver-advertise-address=10.185.73.68
+...
+```
+
+On Node01 and Node02 You must run the next command, to join the new workers nodes.
+    
+
+```sh
+...
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 10.74.84.75:6443 --token d12xz3.l02dpzix58gy3k1m \
+    --discovery-token-ca-cert-hash sha256:35415f7fd915aafcbc86b23ff074c07c1ef08abdf77a5811683ebfb210525ad4
+...
+```
+
+Finally, to add a subnet you must run 
+
+
+```sh
+kubectl apply -f https://docs.projectcalico.org/manifests/calico.yaml
+
+```
+
+Note: To run control-plane on Master01 you must use `kubectl`, on Master02 you must use `kubectl --kubeconfig=/etc/kubernetes/admin.conf`
