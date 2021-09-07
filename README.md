@@ -284,9 +284,9 @@ On Master02 you must Join another Control-plane node (Master) by running the nex
 
 You can now join any number of the control-plane node running the following command on each as root:
 
-  kubeadm join 10.74.84.75:6443 --token d12xz3.l02dpzix58gy3k1m \
+  kubeadm join 5.5.5.5:6443 --token d12xz3.l02dpzix58gy3k1m \
     --discovery-token-ca-cert-hash sha256:35415f7fd915aafcbc86b23ff074c07c1ef08abdf77a5811683ebfb210525ad4 \
-    --control-plane --certificate-key 478bcd1bb75c459b9641ac614220c5ce88930e7f5292d2ff48482d753aa520c3 --apiserver-advertise-address=10.185.73.68
+    --control-plane --certificate-key 478bcd1bb75c459b9641ac614220c5ce88930e7f5292d2ff48482d753aa520c3 --apiserver-advertise-address=5.5.5.5
 ...
 ```
 
@@ -297,7 +297,7 @@ On Node01 and Node02 You must run the next command, to join the new workers node
 ...
 Then you can join any number of worker nodes by running the following on each as root:
 
-kubeadm join 10.74.84.75:6443 --token d12xz3.l02dpzix58gy3k1m \
+kubeadm join 5.5.5.5:6443 --token d12xz3.l02dpzix58gy3k1m \
     --discovery-token-ca-cert-hash sha256:35415f7fd915aafcbc86b23ff074c07c1ef08abdf77a5811683ebfb210525ad4
 ...
 ```
