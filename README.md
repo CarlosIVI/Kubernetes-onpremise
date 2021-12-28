@@ -47,7 +47,7 @@ The architecture to deploy on this tutorial is focus on ensure a High Avaiabilit
 ![imagen github](https://user-images.githubusercontent.com/31323133/125170141-02d60080-e173-11eb-820e-d6c82efac463.png)
 
 
-## General pre-requisites
+## General prerequisites
 
 We are going to prepare all our cluster node virtual machines for the Kubernetes installation, first of all, we must disable the swap, we could do this by executing the following commands in the CLI:
 
